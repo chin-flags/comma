@@ -1,13 +1,15 @@
-import type { Metadata } from "next";
+'use client';
+
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { useThemeStore } from '@/lib/theme';
+import { useEffect } from 'react';
+import { getThemeFromLocalStorage, saveThemeToLocalStorage } from '@/lib/storage';
+// import { metadata } from './metadata'; // metadata is automatically picked up from metadata.ts
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "Comma - Daily Writing Practice",
-  description: "A mindful writing app for daily practice",
-};
+// export { metadata }; // No need to re-export metadata from a client component
 
 export default function RootLayout({
   children,
@@ -16,7 +18,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <ThemeWrapper>{children}</ThemeWrapper>
     </html>
+  );
+}
+
+function ThemeWrapper({ children }: { children: React.ReactNode }) {
+  const { theme, setTheme } = useThemeStore();
+
+  useEffect(() => {
+    const storedTheme = getThemeFromLocalStorage();
+    if (storedTheme) {
+      setTheme(storedTheme);
+    }
+  }, [setTheme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    saveThemeToLocalStorage(theme);
+  }, [theme]);
+
+  return (
+    <body className={inter.className}>{children}</body>
   );
 }
