@@ -62,3 +62,26 @@ export const saveFocusModeToLocalStorage = (focusMode: FocusModeState) => {
     }
   }
 };
+
+export interface HelperPreferences {
+  helperDelay: number; // delay in milliseconds
+}
+
+export const getHelperPreferencesFromLocalStorage = (): HelperPreferences | null => {
+  if (typeof window !== 'undefined') {
+    const helperPrefs = localStorage.getItem('helperPreferences');
+    return helperPrefs ? JSON.parse(helperPrefs) : null;
+  }
+  return null;
+};
+
+export const saveHelperPreferencesToLocalStorage = (preferences: HelperPreferences) => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('helperPreferences', JSON.stringify(preferences));
+    } catch (error) {
+      console.error('Error saving helper preferences to localStorage:', error);
+      alert('Could not save helper preferences. Your browser storage might be full.');
+    }
+  }
+};

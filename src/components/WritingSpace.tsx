@@ -5,14 +5,20 @@ import { getWritingSessionFromLocalStorage, saveWritingSessionToLocalStorage, Wr
 import { countWords, formatTime } from '@/lib/metrics';
 import { useFocusModeStore } from '@/lib/focusMode';
 import { useThemeStore } from '@/lib/theme'; // Import useThemeStore
+import { useHelperStore, getContextualMessage } from '@/lib/helper'; // Import helper
 import MetricsDisplay from './MetricsDisplay';
 import ThemeToggle from './ThemeToggle'; // Import ThemeToggle
 import FocusModeToggle from './FocusModeToggle'; // Import FocusModeToggle
+import CommaHelper from './CommaHelper'; // Import CommaHelper
 
 const WritingSpace: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const helperTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isReturningUserRef = useRef(false);
+
   const { typewriterMode, zenMode, toggleTypewriter, toggleZen } = useFocusModeStore();
   const { theme } = useThemeStore(); // Get theme from store
+  const { showHelper, hideHelper, helperDelay } = useHelperStore(); // Get helper functions
 
   const [session, setSession] = useState<WritingSession | null>(null);
   const [content, setContent] = useState('');
@@ -28,6 +34,10 @@ const WritingSpace: React.FC = () => {
       setContent(loadedSession.content);
       setWordCount(loadedSession.wordCount);
       setElapsedTime(Math.floor((Date.now() - loadedSession.startTime) / 1000));
+      // Mark as returning user if there's existing content
+      if (loadedSession.content && loadedSession.content.trim().length > 0) {
+        isReturningUserRef.current = true;
+      }
     } else {
       const newSession: WritingSession = {
         sessionId: crypto.randomUUID(),
@@ -88,7 +98,48 @@ const WritingSpace: React.FC = () => {
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
     setSaveStatus('unsaved');
+
+    // Hide helper immediately when typing
+    hideHelper();
+
+    // Reset helper timer - clear existing timer and start new one
+    if (helperTimerRef.current) {
+      clearTimeout(helperTimerRef.current);
+    }
+
+    // Start new timer for helper appearance
+    helperTimerRef.current = setTimeout(() => {
+      const message = getContextualMessage(e.target.value, isReturningUserRef.current);
+      showHelper(message);
+      // After first appearance, user is no longer "returning"
+      if (isReturningUserRef.current) {
+        isReturningUserRef.current = false;
+      }
+    }, helperDelay);
   };
+
+  // Cleanup helper timer on unmount and handle visibility changes
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // User switched tabs - clear timer and hide helper
+        if (helperTimerRef.current) {
+          clearTimeout(helperTimerRef.current);
+          helperTimerRef.current = null;
+        }
+        hideHelper();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (helperTimerRef.current) {
+        clearTimeout(helperTimerRef.current);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [hideHelper]);
 
   // Typewriter Mode Effect
   useEffect(() => {
@@ -144,6 +195,7 @@ const WritingSpace: React.FC = () => {
         <ThemeToggle />
         <FocusModeToggle />
       </div>
+      <CommaHelper />
     </div>
   );
 };
