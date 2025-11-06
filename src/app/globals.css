@@ -33,3 +33,14 @@ html, body {
     text-wrap: balance;
   }
 }
+
+/* Zen Mode Styling */
+.zen-mode-hide {
+  opacity: 0.1;
+  transition: opacity 0.5s ease-in-out 3s; /* Fade out after 3s delay */
+}
+
+.zen-mode-hide:hover {
+  opacity: 1;
+  transition: opacity 0.1s ease-in-out; /* Fade in quickly on hover */
+}
